@@ -9,19 +9,44 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-        <style type="text/css">html,body{margin:0px;width:100%;}body {padding: 20px;box-sizing:border-box;}h3{width:20%;}.table-data{display:none;width:80%;float:right;}.active .table-data{display:block;}.active h3::before{content:">";display:inline-block;width:20px;height:20px;}textarea{width:100%;height:400px;}</style>
-        <script type="text/javascript">function toggle_visibility(dom){var tableData = dom.document.activeElement.parentElement.parentElement;if (tableData.classList.contains('active')) tableData.classList.remove('active'); else tableData.classList.add('active');}</script>
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+        <script type="text/javascript">function toggle_visibility(tableData){ if (tableData.classList.contains('active')) tableData.classList.remove('active'); else tableData.classList.add('active');}</script>
     </head>
     <body>
-        <form action="" method="post">
-            <div><label>Host:</label> <input type="text" name="host" value="<?php echo $myLaravel->GetHost();?>" /></div>
-            <div><label>Database:</label> <input type="text" name="database" value="<?php echo $myLaravel->GetDatabase();?>" /></div>
-            <div><label>Username:</label> <input type="text" name="username" value="<?php echo $myLaravel->GetUsername();?>" /></div>
-            <div><label>Password:</label> <input type="text" name="password" value="<?php echo $myLaravel->GetPassword();?>" /></div>
-            <div><input type="submit" /></div>
-        </form>
-        <hr/>
-        <?php echo $myLaravel->GetMigrations(); ?>
+        <div class="container">
+            <div class="row jumbotron">
+                <div class="col-md-7">
+                    <h1>My Laravel Migrate</h1>
+                </div>
+                <div class="col-md-5">
+                    <form action="" method="post">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="form-group"><label for="host">Host:</label> <input type="text" class="form-control" id="host" name="host" placeholder="ex. localhost" value="<?php echo $myLaravel->GetHost();?>" /></div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group"><label for="database">Database:</label> <input type="text" class="form-control" id="database" name="database" placeholder="test" value="<?php echo $myLaravel->GetDatabase();?>" /></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="form-group"><label for="username">Username:</label> <input type="text" class="form-control" id="username" name="username" placeholder="root" value="<?php echo $myLaravel->GetUsername();?>" /></div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group"><label for="password">Password:</label> <input type="text" class="form-control" id="password" name="password" placeholder="pass123" value="<?php echo $myLaravel->GetPassword();?>" /></div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-success pull-right" title="Connect"><span class="glyphicon glyphicon-play" aria-hidden="true"></span></button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            <?php echo $myLaravel->GetMigrations(); ?>
+        </div>
+        <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
     </body>
 </html><?php
 
@@ -99,6 +124,8 @@ class MyLaravelMigrate{
         if(!$this->process) return;
 
         $output="";
+        $tableLinks=[];
+        $tableData=[];
 
         $db = new DB();
         $db->EstablishConnections($this->GetHost(), $this->GetDatabase(), $this->GetUsername(), $this->GetPassword(), $this->GetUsername(), $this->GetPassword());
@@ -165,9 +192,22 @@ class MyLaravelMigrate{
                 . indent() . " */" . PHP_EOL
                 . "}";
 
-            $output .= "<div><h3><a href='javascript: toggle_visibility(this);void 0;'>$tablename</a></h3><div class='table-data'><h4>$tablename</h4><textarea>$eloquentData</textarea></div></div>";
+            $tableLinks[] = "<li role='presentation'><a href='#table-$tablename' aria-controls='table-$tablename' role='tab' data-toggle='tab'>$tablename</a></li>";
+            $tableData[] = "<div role='tabpanel' class='tab-pane' id='table-$tablename'><div class='well'><div class=''form-group'><label>$tablename</label><textarea class='form-control input-lg' rows='15'>$eloquentData</textarea></div></div></div>";
         }
+
         unset($db);
+
+        $output .= "<div><ul class=\"nav nav-pills\" role=\"tablist\">";
+        foreach($tableLinks as $tableLink){
+            $output .= $tableLink;
+        }
+        $output .= "</ul><div class=\"tab-content\" style='margin-top:50px'>";
+        foreach($tableData as $data){
+            $output .= $data;
+        }
+        $output .= "</div></div>";
+
         return $output;
     }
 
