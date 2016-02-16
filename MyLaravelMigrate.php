@@ -128,8 +128,11 @@ class MyLaravelMigrate{
         $tableData=[];
 
         $db = new DB();
-        $db->EstablishConnections($this->GetHost(), $this->GetDatabase(), $this->GetUsername(), $this->GetPassword(), $this->GetUsername(), $this->GetPassword());
-        if($db) $output.= "<p>Connected to <b>".$this->GetDatabase()."</b> on <b>".$this->GetHost()."</b>.</p>";
+        if($db->EstablishConnections($this->GetHost(), $this->GetDatabase(), $this->GetUsername(), $this->GetPassword(), $this->GetUsername(), $this->GetPassword()))
+            $output.= "<p>Connected to <b>".$this->GetDatabase()."</b> on <b>".$this->GetHost()."</b>.</p>";
+        else
+            $output.= "<p>Unable to connect. Please verify permissions.</p>";
+
         $query = "show tables;";
         $tables = $db->Query($query);
         $output .= "<p>Found " . count($tables) . " tables.</p>";
@@ -395,10 +398,25 @@ class DB{
     const DB_ErrorMessage = "Your request was not able to be completed due to a system error has occured";
     function EstablishConnections($host, $dbname, $rUser, $rPwd, $rwUser, $rwPwd){
         //Establish Read Only Connection
-        if (!isset($mysql) || $mysql == null) {$mysqlReader = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $rUser, $rPwd);}
-        //Establish Read Write Connection
-        if (!isset($mysql) || $mysql == null) {$mysqlAdmin = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $rwUser, $rwPwd);}
-        self::$dbConnection = new DBConnection($mysqlReader, $mysqlAdmin);
+        try {
+            if (!isset($mysqlReader) || $mysqlReader == null) {
+                $mysqlReader = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $rUser, $rPwd);
+            }
+            //Establish Read Write Connection
+            if (!isset($mysqlAdmin) || $mysqlAdmin == null) {
+                $mysqlAdmin = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $rwUser, $rwPwd);
+            }
+            self::$dbConnection = new DBConnection($mysqlReader, $mysqlAdmin);
+            if (isset(self::$dbConnection->readOnly) && isset(self::$dbConnection->readWrite)) {
+                return true;
+            } else {
+                return false;
+            }
+        }catch (PDOException $e) {
+            echo "Connection failed: " . $e->getMessage();
+            return false;
+        }
+
     }
 
     function CloseConnections(){self::$dbConnection = null;}
