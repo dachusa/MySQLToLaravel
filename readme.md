@@ -1,4 +1,4 @@
-# Mysql to Laravel
+# MySQL to Laravel
 
 This is a script to help with mapping an existing MySQL database to a new Laravel build.
 
