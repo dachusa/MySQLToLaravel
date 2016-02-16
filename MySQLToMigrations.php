@@ -26,7 +26,6 @@ if(!$process) {
 
     $filePath = '../.env';
     if (file_exists($filePath)) {
-        echo "<p><i>Importing connection Settings from environment file.</i></p>";
         $handle = @fopen($filePath, "r");
         if ($handle) {
             while (($buffer = fgets($handle, 4096)) !== false) {
@@ -56,91 +55,142 @@ if(!$process) {
 }
 
 ?>
-<form action="" method="post">
-    <div><label>Host:</label> <input type="text" name="host" value="<?php echo $connection_host;?>" /></div>
-    <div><label>Database:</label> <input type="text" name="database" value="<?php echo $connection_database;?>" /></div>
-    <div><label>Username:</label> <input type="text" name="username" value="<?php echo $connection_username;?>" /></div>
-    <div><label>Password:</label> <input type="text" name="password" value="<?php echo $connection_password;?>" /></div>
-    <div><input type="submit" /></div>
-</form>
+<html>
+    <head>
+        <style type="text/css">
+            html,body{
+                margin:0px;
+                width:100%;
+            }
+            body {
+                padding: 20px;
+                box-sizing:border-box;
+            }
+            h3{
+                width:20%;
+            }
+            .table-data{
+                display:none;
+                width:80%;
+                float:right;
+            }
 
+            .active .table-data{
+                display:block;
+            }
+            .active h3::before{
+                content:">";
+                display:inline-block;
+                width:20px;
+                height:20px;
+            }
+
+            textarea{
+                width:100%;
+                height:400px;
+            }
+
+            h4{
+
+            }
+        </style>
+        <script type="text/javascript">
+            function toggle_visibility(dom){
+                tableData = dom.document.activeElement.parentElement.parentElement;
+                if (tableData.classList.contains('active')) {
+                    tableData.classList.remove('active');
+                }else{
+                    tableData.classList.add('active');
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <form action="" method="post">
+            <div><label>Host:</label> <input type="text" name="host" value="<?php echo $connection_host;?>" /></div>
+            <div><label>Database:</label> <input type="text" name="database" value="<?php echo $connection_database;?>" /></div>
+            <div><label>Username:</label> <input type="text" name="username" value="<?php echo $connection_username;?>" /></div>
+            <div><label>Password:</label> <input type="text" name="password" value="<?php echo $connection_password;?>" /></div>
+            <div><input type="submit" /></div>
+        </form>
+        <hr/>
+        <?php
+        if($process) {
+            $indent = "    ";
+            $db = new DB();
+            $db->EstablishConnections($connection_host, $connection_database, $connection_username, $connection_password, $connection_username, $connection_password);
+            echo "<p>Connected to $connection_database on $connection_host.</p>";
+            $query = "show tables;";
+            $tables = $db->Query($query);
+            echo "<p>Found " . count($tables) . " tables.</p>";
+            foreach ($tables as $table) {
+                $tablename = $table[0];
+                $query = "describe `" . $tablename . "`;";
+
+                $eloquentData = "<?php" . PHP_EOL;
+                $eloquentData .= PHP_EOL;
+                $eloquentData .="use Illuminate\Database\Schema\Blueprint;" . PHP_EOL;
+                $eloquentData .="use Illuminate\Database\Migrations\Migration;" . PHP_EOL;
+                $eloquentData .= PHP_EOL;
+                $eloquentData .= "class Create".ucwords($tablename)."Table extends Migration" . PHP_EOL;
+                $eloquentData .= "{" . PHP_EOL;
+                $eloquentData .= $indent . "/**" . PHP_EOL;
+                $eloquentData .= $indent . " * Run the migrations." . PHP_EOL;
+                $eloquentData .= $indent . " *" . PHP_EOL;
+                $eloquentData .= $indent . " * @return void" . PHP_EOL;
+                $eloquentData .= $indent . " */" . PHP_EOL;
+                $eloquentData .= $indent . "public function up()" . PHP_EOL;
+                $eloquentData .= $indent . "{" . PHP_EOL;
+                $eloquentData .= $indent. $indent . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL;
+                $eloquentData .= $indent. $indent . $indent . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
+
+                $columns = $db->Query($query);
+                foreach ($columns as $columndata) {
+                    $eloquentData .= addColumnByDataType($columndata) . ';' . PHP_EOL;
+                }
+                $eloquentData .= $indent. $indent .$indent . "});" . PHP_EOL;
+                $eloquentData .= $indent. $indent ."}else{" . PHP_EOL;
+                foreach ($columns as $columndata) {
+                    $eloquentData .= $indent. $indent .$indent . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL;
+                    $eloquentData .= $indent. $indent .$indent . "//" . PHP_EOL;
+                    $eloquentData .= $indent. $indent .$indent . $indent . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL;
+                    $eloquentData .= $indent. $indent .$indent . addColumnByDataType($columndata) . ';' . PHP_EOL;
+                    $eloquentData .= $indent. $indent .$indent . $indent . '});' . PHP_EOL;
+                    $eloquentData .= $indent. $indent .$indent . '}' . PHP_EOL . PHP_EOL;
+                }
+                $eloquentData .= $indent. $indent . "}" . PHP_EOL;
+                $eloquentData .= $indent . "}" . PHP_EOL;
+                $eloquentData .= PHP_EOL;
+
+                $eloquentData .= $indent . "/**" . PHP_EOL;
+                $eloquentData .= $indent . " * Reverse the migrations." . PHP_EOL;
+                $eloquentData .= $indent . " *" . PHP_EOL;
+                $eloquentData .= $indent . " * @return void" . PHP_EOL;
+                $eloquentData .= $indent . " */" . PHP_EOL;
+                $eloquentData .= $indent . "public function down()" . PHP_EOL;
+                $eloquentData .= $indent . "{" . PHP_EOL;
+                $eloquentData .= $indent .$indent . "Schema::drop('$tablename');" . PHP_EOL;
+                $eloquentData .= $indent . "}" . PHP_EOL;
+
+                $eloquentData .= $indent . "/**" . PHP_EOL;
+                $eloquentData .= $indent . " *" . PHP_EOL;
+                foreach ($columns as $columndata) {
+                    $eloquentData .= $indent . " * " . $columndata["Field"] . "	" . $columndata["Type"] . "	" . $columndata["Null"] . "	" . $columndata["Key"] . "	" . $columndata["Default"] . "	" . $columndata["Extra"] . "	" . PHP_EOL;
+                }
+                $eloquentData .= $indent . " *" . PHP_EOL;
+                $eloquentData .= $indent . " */" . PHP_EOL;
+                $eloquentData .= "}";
+
+                echo "<div><h3><a href='javascript: toggle_visibility(this);void 0;'>$tablename</a></h3><div class='table-data'><h4>$tablename</h4>";
+                echo "<textarea>$eloquentData</textarea>";
+                echo "</div></div>";
+            }
+            unset($db);
+        }
+        ?>
+    </body>
+</html>
 <?php
-if($process) {
-    $indent = "    ";
-    $db = new DB();
-    echo "<p>Connecting to " . $connection_host . "</p>";
-    $db->EstablishConnections($connection_host, $connection_database, $connection_username, $connection_password, $connection_username, $connection_password);
-    echo "<p>Connected.</p>";
-    $query = "show tables;";
-    echo "<p><i>$query</i></p>";
-    $tables = $db->Query($query);
-    foreach ($tables as $table) {
-        $tablename = $table[0];
-        echo "<div><h3>" . $tablename . "</h3><div>";
-        $query = "describe `" . $tablename . "`;";
-
-        $eloquentData = "<?php" . PHP_EOL;
-        $eloquentData .= PHP_EOL;
-        $eloquentData .="use Illuminate\Database\Schema\Blueprint;" . PHP_EOL;
-        $eloquentData .="use Illuminate\Database\Migrations\Migration;" . PHP_EOL;
-        $eloquentData .= PHP_EOL;
-        $eloquentData .= "class Create".ucwords($tablename)."Table extends Migration" . PHP_EOL;
-        $eloquentData .= "{" . PHP_EOL;
-        $eloquentData .= $indent . "/**" . PHP_EOL;
-        $eloquentData .= $indent . " * Run the migrations." . PHP_EOL;
-        $eloquentData .= $indent . " *" . PHP_EOL;
-        $eloquentData .= $indent . " * @return void" . PHP_EOL;
-        $eloquentData .= $indent . " */" . PHP_EOL;
-        $eloquentData .= $indent . "public function up()" . PHP_EOL;
-        $eloquentData .= $indent . "{" . PHP_EOL;
-        $eloquentData .= $indent. $indent . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL;
-        $eloquentData .= $indent. $indent . $indent . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
-
-        echo "<p><i>$query</i></p>";
-        $columns = $db->Query($query);
-        foreach ($columns as $columndata) {
-            $eloquentData .= addColumnByDataType($columndata) . ';' . PHP_EOL;
-        }
-        $eloquentData .= $indent. $indent .$indent . "});" . PHP_EOL;
-        $eloquentData .= $indent. $indent ."}else{" . PHP_EOL;
-        foreach ($columns as $columndata) {
-            $eloquentData .= $indent. $indent .$indent . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL;
-            $eloquentData .= $indent. $indent .$indent . "//" . PHP_EOL;
-            $eloquentData .= $indent. $indent .$indent . $indent . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL;
-            $eloquentData .= $indent. $indent .$indent . addColumnByDataType($columndata) . ';' . PHP_EOL;
-            $eloquentData .= $indent. $indent .$indent . $indent . '});' . PHP_EOL;
-            $eloquentData .= $indent. $indent .$indent . '}' . PHP_EOL . PHP_EOL;
-        }
-        $eloquentData .= $indent. $indent . "}" . PHP_EOL;
-        $eloquentData .= $indent . "}" . PHP_EOL;
-        $eloquentData .= PHP_EOL;
-
-        $eloquentData .= $indent . "/**" . PHP_EOL;
-        $eloquentData .= $indent . " * Reverse the migrations." . PHP_EOL;
-        $eloquentData .= $indent . " *" . PHP_EOL;
-        $eloquentData .= $indent . " * @return void" . PHP_EOL;
-        $eloquentData .= $indent . " */" . PHP_EOL;
-        $eloquentData .= $indent . "public function down()" . PHP_EOL;
-        $eloquentData .= $indent . "{" . PHP_EOL;
-        $eloquentData .= $indent .$indent . "Schema::drop('$tablename');" . PHP_EOL;
-        $eloquentData .= $indent . "}" . PHP_EOL;
-
-        $eloquentData .= $indent . "/**" . PHP_EOL;
-        $eloquentData .= $indent . " *" . PHP_EOL;
-        foreach ($columns as $columndata) {
-            $eloquentData .= $indent . " * " . $columndata["Field"] . "	" . $columndata["Type"] . "	" . $columndata["Null"] . "	" . $columndata["Key"] . "	" . $columndata["Default"] . "	" . $columndata["Extra"] . "	" . PHP_EOL;
-        }
-        $eloquentData .= $indent . " *" . PHP_EOL;
-        $eloquentData .= $indent . " */" . PHP_EOL;
-        $eloquentData .= "}";
-
-        echo "<textarea>$eloquentData</textarea>";
-        echo "</div></div>";
-    }
-    unset($db);
-}
-
-
 
 //php helpers
 function addColumnByDataType($coldata)
