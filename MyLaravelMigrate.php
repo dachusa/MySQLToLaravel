@@ -5,7 +5,6 @@
  * Time: 12:44 PM
  */
     $myLaravel = new MyLaravelMigrate();
-
 ?><!DOCTYPE html>
 <html>
     <head>
@@ -118,19 +117,19 @@ class MyLaravelMigrate{
                 . PHP_EOL
                 . "class Create".ucwords($tablename)."Table extends Migration" . PHP_EOL
                 . "{" . PHP_EOL
-                . indent . "/**" . PHP_EOL
-                . indent . " * Run the migrations." . PHP_EOL
-                . indent . " *" . PHP_EOL
-                . indent . " * @return void" . PHP_EOL
-                . indent . " */" . PHP_EOL
-                . indent . "public function up()" . PHP_EOL
-                . indent . "{" . PHP_EOL
+                . indent() . "/**" . PHP_EOL
+                . indent() . " * Run the migrations." . PHP_EOL
+                . indent() . " *" . PHP_EOL
+                . indent() . " * @return void" . PHP_EOL
+                . indent() . " */" . PHP_EOL
+                . indent() . "public function up()" . PHP_EOL
+                . indent() . "{" . PHP_EOL
                 . indent(2) . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL
                 . indent(3) . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
 
             $columns = $db->Query($query);
             foreach ($columns as $columndata) {
-                $eloquentData .= self::AddColumnByDataType($columndata) . ';' . PHP_EOL;
+                $eloquentData .= indent(4) . self::AddColumnByDataType($columndata) . ';' . PHP_EOL;
             }
             $eloquentData .= indent(3) . "});" . PHP_EOL
                 . indent(2) ."}else{" . PHP_EOL;
@@ -144,26 +143,26 @@ class MyLaravelMigrate{
                     . PHP_EOL;
             }
             $eloquentData .= indent(2) . "}" . PHP_EOL
-                . indent . "}" . PHP_EOL
+                . indent() . "}" . PHP_EOL
                 . PHP_EOL;
 
-            $eloquentData .= indent . "/**" . PHP_EOL
-                . indent . " * Reverse the migrations." . PHP_EOL
-                . indent . " *" . PHP_EOL
-                . indent . " * @return void" . PHP_EOL
-                . indent . " */" . PHP_EOL
-                . indent . "public function down()" . PHP_EOL
-                . indent . "{" . PHP_EOL
+            $eloquentData .= indent() . "/**" . PHP_EOL
+                . indent() . " * Reverse the migrations." . PHP_EOL
+                . indent() . " *" . PHP_EOL
+                . indent() . " * @return void" . PHP_EOL
+                . indent() . " */" . PHP_EOL
+                . indent() . "public function down()" . PHP_EOL
+                . indent() . "{" . PHP_EOL
                 . indent(2) . "Schema::drop('$tablename');" . PHP_EOL
-                . indent . "}" . PHP_EOL;
+                . indent() . "}" . PHP_EOL;
 
-            $eloquentData .= indent . "/**" . PHP_EOL
-                . indent . " *" . PHP_EOL;
+            $eloquentData .= indent() . "/**" . PHP_EOL
+                . indent() . " *" . PHP_EOL;
             foreach ($columns as $columndata) {
-                $eloquentData .= indent . " * " . $columndata["Field"] . "	" . $columndata["Type"] . "	" . $columndata["Null"] . "	" . $columndata["Key"] . "	" . $columndata["Default"] . "	" . $columndata["Extra"] . "	" . PHP_EOL;
+                $eloquentData .= indent() . " * " . $columndata["Field"] . "	" . $columndata["Type"] . "	" . $columndata["Null"] . "	" . $columndata["Key"] . "	" . $columndata["Default"] . "	" . $columndata["Extra"] . "	" . PHP_EOL;
             }
-            $eloquentData .= indent . " *" . PHP_EOL
-                . indent . " */" . PHP_EOL
+            $eloquentData .= indent() . " *" . PHP_EOL
+                . indent() . " */" . PHP_EOL
                 . "}";
 
             $output .= "<div><h3><a href='javascript: toggle_visibility(this);void 0;'>$tablename</a></h3><div class='table-data'><h4>$tablename</h4><textarea>$eloquentData</textarea></div></div>";
@@ -450,8 +449,7 @@ class DB{
 }
 
 //String helpers
-const indent = "    ";
-function indent($count=1){return str_repeat(indent, $count);}
+function indent($count=1){$indent = "    ";$indents = $indent;if ($count <= 1) {return $indents;} else {for ($i = 1; $i < $count; $i++) {$indents .= $indent;}return $indents;}}
 function after($needle, $haystack){if (!is_bool(strpos($haystack, $needle)))return substr($haystack, strpos($haystack, $needle) + strlen($needle));}
 function after_last($needle, $haystack){if (!is_bool(strrevpos($haystack, $needle)))return substr($haystack, strrevpos($haystack, $needle) + strlen($needle));}
 function before($needle, $haystack){if(strpos($haystack, $needle)>-1){return substr($haystack, 0, strpos($haystack, $needle));}else{return $haystack;}}
