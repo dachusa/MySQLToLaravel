@@ -190,6 +190,7 @@ class MyLaravelMigrate{
                 . indent() . " */" . PHP_EOL
                 . indent() . "public function down()" . PHP_EOL
                 . indent() . "{" . PHP_EOL
+                . self::DropForeignKeys($tablename, indent(2))
                 . indent(2) . "Schema::drop('$tablename');" . PHP_EOL
                 . indent() . "}" . PHP_EOL;
 
@@ -388,6 +389,16 @@ class MyLaravelMigrate{
         $foreignCall="";
         foreach($relations as $relation) {
             $foreignCall.= $indentation . '$table->foreign(\'' . $relation['COLUMN_NAME'] . '\')->references(\'' . $relation['REFERENCED_COLUMN_NAME'] . '\')->on(\'' . $relation['REFERENCED_TABLE_NAME'] . '\');' . PHP_EOL;
+        }
+        return $foreignCall;
+    }
+
+    private function DropForeignKeys($tablename, $indentation){
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $foreignCall="";
+        foreach($relations as $relation) {
+            $foreignCall.= $indentation . '$table->dropForeign([\'' . $relation['COLUMN_NAME'] . '\']);' . PHP_EOL;
         }
         return $foreignCall;
     }
