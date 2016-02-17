@@ -398,7 +398,13 @@ class MyLaravelMigrate{
         $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
         $foreignCall="";
         foreach($relations as $relation) {
-            $foreignCall.= $indentation . '$table->dropForeign([\'' . $relation['COLUMN_NAME'] . '\']);' . PHP_EOL;
+            $foreignCall.= $indentation . indent() . '$table->dropForeign([\'' . $relation['COLUMN_NAME'] . '\']);' . PHP_EOL;
+        }
+
+        if($foreignCall!=""){
+            $foreignCall = $indentation . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
+                . $foreignCall
+                . $indentation . '});' . PHP_EOL;
         }
         return $foreignCall;
     }
