@@ -53,6 +53,7 @@
 class MyLaravelMigrate{
     private $connection;
     private $process=false;
+    private $db;
 
     public function __construct()
     {
@@ -127,14 +128,14 @@ class MyLaravelMigrate{
         $tableLinks=[];
         $tableData=[];
 
-        $db = new DB();
-        if($db->EstablishConnections($this->GetHost(), $this->GetDatabase(), $this->GetUsername(), $this->GetPassword(), $this->GetUsername(), $this->GetPassword()))
+        $this->db = new DB();
+        if($this->db->EstablishConnections($this->GetHost(), $this->GetDatabase(), $this->GetUsername(), $this->GetPassword(), $this->GetUsername(), $this->GetPassword()))
             $output.= "<p>Connected to <b>".$this->GetDatabase()."</b> on <b>".$this->GetHost()."</b>.</p>";
         else
             $output.= "<p>Unable to connect. Please verify permissions.</p>";
 
         $query = "show tables;";
-        $tables = $db->Query($query);
+        $tables = $this->db->Query($query);
         $output .= "<p>Found " . count($tables) . " tables.</p>";
         foreach ($tables as $table) {
             $tablename = $table[0];
@@ -157,9 +158,12 @@ class MyLaravelMigrate{
                 . indent(2) . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL
                 . indent(3) . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
 
-            $columns = $db->Query($query);
+            $columns = $this->db->Query($query);
             foreach ($columns as $columndata) {
-                $eloquentData .= indent(4) . self::AddColumnByDataType($columndata) . ';' . PHP_EOL;
+                $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
+                    $eloquentData .= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
+                }
             }
             $eloquentData .= indent(3) . "});" . PHP_EOL
                 . indent(2) ."}else{" . PHP_EOL;
@@ -167,8 +171,11 @@ class MyLaravelMigrate{
                 $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL
                     . indent(3) . "//" . PHP_EOL
                     . indent(4) . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
-                    . indent(5) . self::AddColumnByDataType($columndata) . ';' . PHP_EOL
-                    . indent(4) . '});' . PHP_EOL
+                    . indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                    if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
+                        $eloquentData .= self::GetForeignKeys($tablename, $columndata["Field"], indent(5));
+                    }
+                $eloquentData .= indent(4) . '});' . PHP_EOL
                     . indent(3) . '}' . PHP_EOL
                     . PHP_EOL;
             }
@@ -199,7 +206,7 @@ class MyLaravelMigrate{
             $tableData[] = "<div role='tabpanel' class='tab-pane' id='table-$tablename'><div class='well'><div class=''form-group'><label>$tablename</label><textarea class='form-control input-lg' rows='15'>$eloquentData</textarea></div></div></div>";
         }
 
-        unset($db);
+        unset($this->db);
 
         $output .= "<div><ul class=\"nav nav-pills\" role=\"tablist\">";
         foreach($tableLinks as $tableLink){
@@ -214,7 +221,7 @@ class MyLaravelMigrate{
         return $output;
     }
 
-    private function AddColumnByDataType($coldata)
+    private function AddColumnByDataType($tablename, $coldata)
     {
         $name = $coldata["Field"];
         $typedata = $coldata["Type"];
@@ -373,6 +380,16 @@ class MyLaravelMigrate{
         }
 
         return $eloquentCall;
+    }
+
+    private function GetForeignKeys($tablename, $columnname, $indentation){
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND COLUMN_NAME =  :columnname;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename), new SQLParameter(":columnname",$columnname)]);
+        $foreignCall="";
+        foreach($relations as $relation) {
+            $foreignCall.= $indentation . '$table->foreign(\'' . $relation['COLUMN_NAME'] . '\')->references(\'' . $relation['REFERENCED_COLUMN_NAME'] . '\')->on(\'' . $relation['REFERENCED_TABLE_NAME'] . '\');' . PHP_EOL;
+        }
+        return $foreignCall;
     }
 }
 
