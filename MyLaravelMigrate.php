@@ -159,14 +159,26 @@ class MyLaravelMigrate{
                 . indent(3) . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
 
             $columns = $this->db->Query($query);
+            $foreignKeys=[];
+
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
                 if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
-                    $eloquentData .= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
+                    $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
                 }
             }
-            $eloquentData .= indent(3) . "});" . PHP_EOL
-                . indent(2) ."}else{" . PHP_EOL;
+            $foreignKeys = array_filter($foreignKeys);
+            if(count($foreignKeys) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($foreignKeys as $foreignKey){
+                    $eloquentData .= $foreignKey;
+                }
+            }
+
+            $eloquentData .=  indent(3) . "});" . PHP_EOL
+            . indent(2) ."}else{" . PHP_EOL;
+
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL
                     . indent(3) . "//" . PHP_EOL
@@ -250,6 +262,9 @@ class MyLaravelMigrate{
             //      $table->binary('data');	BLOB equivalent for the database.
             case 'BINARY':
                 $eloquentCall .= 'binary(\'' . $name . '\')';
+                break;
+            case 'BIT':
+                $eloquentCall .= 'boolean(\'' . $name . '\')';
                 break;
             //      $table->boolean('confirmed');	BOOLEAN equivalent for the database.
             case 'BOOLEAN':
@@ -377,7 +392,7 @@ class MyLaravelMigrate{
         }
 
         if($default != ""){
-            $eloquentCall .= "->default('$default')";
+            $eloquentCall .= "->default('".addslashes($default)."')";
         }
 
         return $eloquentCall;
