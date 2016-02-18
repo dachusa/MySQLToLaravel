@@ -163,6 +163,9 @@ class MyLaravelMigrate{
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
+                    $eloquentData .= indent(4) . '$table->primary(\''.$columndata["Field"].'\');' . PHP_EOL;
+                }
                 if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
                     $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
                 }
@@ -184,6 +187,9 @@ class MyLaravelMigrate{
                     . indent(3) . "//" . PHP_EOL
                     . indent(4) . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
                     . indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                    if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
+                        $eloquentData .= indent(5) . '$table->primary(\''.$columndata["Field"].'\');' . PHP_EOL;
+                    }
                     if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
                         $eloquentData .= self::GetForeignKeys($tablename, $columndata["Field"], indent(5));
                     }
@@ -253,7 +259,7 @@ class MyLaravelMigrate{
             //      $table->bigIncrements('id');	Incrementing ID (primary key) using a "UNSIGNED BIG INTEGER" equivalent.
             //      $table->bigInteger('votes');	BIGINT equivalent for the database.
             case 'BIGINT':
-                if (strpos(strtoupper($key),"PRI") > -1) {
+                if (strpos(strtoupper($extra),"AUTO_INCREMENT") > -1) {
                     $eloquentCall .= 'bigIncrements(\'' . $name . '\')';
                 } else {
                     $eloquentCall .= 'bigInteger(\'' . $name . '\')';
@@ -304,7 +310,7 @@ class MyLaravelMigrate{
             //      $table->increments('id');	Incrementing ID (primary key) using a "UNSIGNED INTEGER" equivalent.
             //      $table->integer('votes');	INTEGER equivalent for the database.
             case 'INT':
-                if (strpos(strtoupper($key), "PRI") > -1) {
+                if (strpos(strtoupper($extra),"AUTO_INCREMENT") > -1) {
                     $eloquentCall .= 'increments(\'' . $name . '\')';
                 } else {
                     $eloquentCall .= 'integer(\'' . $name . '\')';
@@ -386,6 +392,7 @@ class MyLaravelMigrate{
             default:
                 return false;
         }
+
         if(strpos(strtoupper($info), " UNSIGNED") > -1){
             $eloquentCall .= "->unsigned()";
         }
