@@ -265,6 +265,9 @@ class MyLaravelMigrate{
                 break;
             case 'BIT':
                 $eloquentCall .= 'boolean(\'' . $name . '\')';
+                if($default!=""){
+                    $default = (strpos($default,'0')>-1) ? "0" : "1";
+                }
                 break;
             //      $table->boolean('confirmed');	BOOLEAN equivalent for the database.
             case 'BOOLEAN':
