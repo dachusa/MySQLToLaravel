@@ -392,7 +392,12 @@ class MyLaravelMigrate{
         }
 
         if($default != ""){
-            $eloquentCall .= "->default('".addslashes($default)."')";
+            if($default=="CURRENT_TIMESTAMP"){
+                $eloquentCall .= "->useCurrent()";
+            }else{
+                $eloquentCall .= "->default('".addslashes($default)."')";
+            }
+
         }
 
         return $eloquentCall;
