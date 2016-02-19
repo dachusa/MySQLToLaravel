@@ -461,8 +461,9 @@ class MyLaravelMigrate{
             case 'TINYINT':
                 if($data==1){
                     $eloquentCall .= 'boolean(\'' . $name . '\')';
+                }else{
+                    $eloquentCall .= 'tinyInteger(\'' . $name . '\')';
                 }
-                $eloquentCall .= 'tinyInteger(\'' . $name . '\')';
                 break;
             //      $table->timestamp('added_on');	TIMESTAMP equivalent for the database.
             case 'TIMESTAMP':
