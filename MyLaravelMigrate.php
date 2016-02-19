@@ -254,20 +254,20 @@ class MyLaravelMigrate{
 
             $indexes = array_filter($indexes);
             if(count($indexes) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                $eloquentData .= indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($indexes as $index){
                     $eloquentData .= $index;
                 }
+                $eloquentData .=  indent(3) . "});" . PHP_EOL;
             }
 
             $uniques = array_filter($uniques);
             if(count($uniques) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                $eloquentData .="Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($uniques as $unique){
                     $eloquentData .= $unique;
                 }
+                $eloquentData .= indent(3) . "});" . PHP_EOL;
             }
 
             $eloquentData .= indent(2) . "}" . PHP_EOL
