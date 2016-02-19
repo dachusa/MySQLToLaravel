@@ -246,11 +246,11 @@ class MyLaravelMigrate{
             }
             $foreignKeys = array_filter($foreignKeys);
             if(count($foreignKeys) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                $eloquentData .=  indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($foreignKeys as $foreignKey){
                     $eloquentData .= $foreignKey;
                 }
+                $eloquentData .=  indent(3) . "});" . PHP_EOL;
             }
 
             $eloquentData .= indent(2) . "}" . PHP_EOL
@@ -470,7 +470,7 @@ class MyLaravelMigrate{
     }
 
     private function GetForeignKeys($tablename, $columnname, $indentation){
-        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND COLUMN_NAME =  :columnname;";
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND COLUMN_NAME =  :columnname AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
         $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename), new SQLParameter(":columnname",$columnname)]);
         $foreignCall="";
         foreach($relations as $relation) {
