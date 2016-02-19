@@ -12,33 +12,7 @@
         <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
         <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
-        <script type="text/javascript">function toggle_visibility(tableData){ if (tableData.classList.contains('active')) tableData.classList.remove('active'); else tableData.classList.add('active');}</script>
-        <script type="text/javascript">
-            jQuery(function(){
-                $(".saveToFile").click(function(){saveTextAsFile(this)});
-                $(".saveAll").click(function(){
-                    $(".saveToFile").each(function(){
-                       $(this).click();
-                    });
-                });
-            });
-            function saveTextAsFile(clicked){
-                var textToWrite = $("#table-"+$(clicked).attr("data-table") + " textarea").val();
-                var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
-                var d = new Date();
-                var fileNameToSaveAs = d.getFullYear() + "_" + (d.getMonth()+1) + "_" + d.getDate() + "_" + d.getHours() + d.getMinutes() + d.getSeconds() + "_create_"+$(clicked).attr("data-table")+"_table.php";
-                var downloadLink = document.createElement("a");
-                downloadLink.download = fileNameToSaveAs;
-                downloadLink.innerHTML = "create_"+$(clicked).attr("data-table")+"_table";
-                window.URL = window.URL || window.webkitURL;
-                downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
-                downloadLink.onclick = destroyClickedElement;
-                downloadLink.style.display = "none";
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-            }
-            function destroyClickedElement(event){document.body.removeChild(event.target);}
-        </script>
+        <script type="text/javascript">jQuery(function(){$(".saveToFile").click(function(){saveTextAsFile(this)});$(".saveAll").click(function(){$(".saveToFile").each(function(){$(this).click();});});});function toggle_visibility(tableData){ if (tableData.classList.contains('active')) tableData.classList.remove('active'); else tableData.classList.add('active');}function saveTextAsFile(clicked){var textToWrite = $("#table-"+$(clicked).attr("data-table") + " textarea").val();var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});var d = new Date();var fileNameToSaveAs = d.getFullYear() + "_" + (d.getMonth()+1) + "_" + d.getDate() + "_" + d.getHours() + d.getMinutes() + d.getSeconds() + "_create_"+$(clicked).attr("data-table")+"_table.php";var downloadLink = document.createElement("a");downloadLink.download = fileNameToSaveAs;downloadLink.innerHTML = "create_"+$(clicked).attr("data-table")+"_table";window.URL = window.URL || window.webkitURL;downloadLink.href = window.URL.createObjectURL(textFileAsBlob);downloadLink.onclick = destroyClickedElement;downloadLink.style.display = "none";document.body.appendChild(downloadLink);downloadLink.click();}function destroyClickedElement(event){document.body.removeChild(event.target);}</script>
     </head>
     <body>
         <div class="container">
