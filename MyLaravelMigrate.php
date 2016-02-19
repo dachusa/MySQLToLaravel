@@ -188,6 +188,8 @@ class MyLaravelMigrate{
             $columns = $this->db->Query($query);
             $foreignKeys=[];
             $primaryKeys=[];
+            $indexes=[];
+            $uniques=[];
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
@@ -198,6 +200,9 @@ class MyLaravelMigrate{
                     $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
                 }
             }
+            $indexes[] = self::GetIndexes($tablename,indent(4));
+            $uniques[] = self::GetUniques($tablename,indent(4));
+
             if(count($primaryKeys)>0){
                 if(count($primaryKeys)==1){
                     $eloquentData .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
@@ -213,12 +218,30 @@ class MyLaravelMigrate{
                     $eloquentData .= $foreignKey;
                 }
             }
+            $indexes = array_filter($indexes);
+            if(count($indexes) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($indexes as $index){
+                    $eloquentData .= $index;
+                }
+            }
+            $uniques = array_filter($uniques);
+            if(count($uniques) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($uniques as $unique){
+                    $eloquentData .= $unique;
+                }
+            }
 
             $eloquentData .=  indent(3) . "});" . PHP_EOL
             . indent(2) ."}else{" . PHP_EOL;
 
             $foreignKeys=[];
             $primaryKeys=[];
+            $indexes=[];
+            $uniques=[];
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL
@@ -235,6 +258,8 @@ class MyLaravelMigrate{
                     . indent(3) . '}' . PHP_EOL
                     . PHP_EOL;
             }
+            $indexes[] = self::GetIndexes($tablename,indent(5));
+            $uniques[] = self::GetUniques($tablename,indent(5));
             if(count($primaryKeys)>0){
                 $eloquentData .= indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                     if(count($primaryKeys)==1){
@@ -251,6 +276,24 @@ class MyLaravelMigrate{
                     $eloquentData .= $foreignKey;
                 }
                 $eloquentData .=  indent(3) . "});" . PHP_EOL;
+            }
+
+            $indexes = array_filter($indexes);
+            if(count($indexes) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($indexes as $index){
+                    $eloquentData .= $index;
+                }
+            }
+
+            $uniques = array_filter($uniques);
+            if(count($uniques) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($uniques as $unique){
+                    $eloquentData .= $unique;
+                }
             }
 
             $eloquentData .= indent(2) . "}" . PHP_EOL
@@ -467,6 +510,39 @@ class MyLaravelMigrate{
         }
 
         return $eloquentCall;
+    }
+
+    private function GetIndexes($tablename,$indentation){
+        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = :tablename AND Non_unique=1 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $indexCall="";
+        foreach($relations as $relation) {
+            $columns = $relation['COLUMN_NAME'];
+            $columns = array_filter(explode(",",$columns));
+            if (count($columns) > 1) {
+                $indexCall .= $indentation . '$table->index([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
+            } else {
+                $indexCall .= $indentation . '$table->index(\'' . implode($columns) . '\');' . PHP_EOL;
+            }
+        }
+        return $indexCall;
+    }
+
+    private function GetUniques($tablename, $indentation){
+        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = :tablename AND Non_unique=0 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $uniqueCall="";
+
+        foreach($relations as $relation) {
+            $columns = $relation['COLUMN_NAME'];
+            $columns = array_filter(explode(",",$columns));
+            if (count($columns) > 1) {
+                $uniqueCall .= $indentation . '$table->unique([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
+            } else {
+                $uniqueCall .= $indentation . '$table->unique(\'' . implode($columns) . '\');' . PHP_EOL;
+            }
+        }
+        return $uniqueCall;
     }
 
     private function GetForeignKeys($tablename, $columnname, $indentation){
