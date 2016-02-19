@@ -10,7 +10,30 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
         <script type="text/javascript">function toggle_visibility(tableData){ if (tableData.classList.contains('active')) tableData.classList.remove('active'); else tableData.classList.add('active');}</script>
+        <script type="text/javascript">
+            jQuery(function(){
+                $(".saveToFile").click(function(){saveTextAsFile(this)});
+            });
+            function saveTextAsFile(clicked){
+                var textToWrite = $("#table-"+$(clicked).attr("data-table") + " textarea").val();
+                var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
+                var d = new Date();
+                var fileNameToSaveAs = d.getFullYear() + "_" + (d.getMonth()+1) + "_" + d.getDate() + "_" + d.getHours() + d.getMinutes() + d.getSeconds() + "_create_"+$(clicked).attr("data-table")+"_table.php";
+                var downloadLink = document.createElement("a");
+                downloadLink.download = fileNameToSaveAs;
+                downloadLink.innerHTML = "create_"+$(clicked).attr("data-table")+"_table";
+                window.URL = window.URL || window.webkitURL;
+                downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+                downloadLink.onclick = destroyClickedElement;
+                downloadLink.style.display = "none";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+            }
+            function destroyClickedElement(event){document.body.removeChild(event.target);}
+        </script>
     </head>
     <body>
         <div class="container">
@@ -45,8 +68,6 @@
             </div>
             <?php echo $myLaravel->GetMigrations(); ?>
         </div>
-        <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
     </body>
 </html><?php
 
@@ -251,7 +272,7 @@ class MyLaravelMigrate{
                 . "}";
 
             $tableLinks[] = "<li role='presentation'><a href='#table-$tablename' aria-controls='table-$tablename' role='tab' data-toggle='tab'>$tablename</a></li>";
-            $tableData[] = "<div role='tabpanel' class='tab-pane' id='table-$tablename'><div class='well'><div class=''form-group'><label>$tablename</label><textarea class='form-control input-lg' rows='15'>$eloquentData</textarea></div></div></div>";
+            $tableData[] = "<div role='tabpanel' class='tab-pane' id='table-$tablename'><div class='well'><div class=''form-group'><button class='btn btn-primary saveToFile' data-table='$tablename' style='margin-bottom:10px'><span class=\"glyphicon glyphicon-floppy-disk\" aria-hidden=\"true\"></span></button><label class='pull-right'>$tablename</label><textarea class='form-control input-lg' rows='15'>$eloquentData</textarea></div></div></div>";
         }
 
         unset($this->db);
