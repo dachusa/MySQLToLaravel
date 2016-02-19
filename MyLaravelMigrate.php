@@ -166,9 +166,13 @@ class MyLaravelMigrate{
             $primaryKeys=[];
             $indexes=[];
             $uniques=[];
+            $autoIncrement=[];
 
             foreach ($columns as $columndata) {
                 $schemaCreateWrapInject .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                if(strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") > -1){
+                    $autoIncrement[]=$columndata["Field"];
+                }
                 if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                     $primaryKeys[]=$columndata["Field"];
                 }
@@ -176,8 +180,10 @@ class MyLaravelMigrate{
                     $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
                 }
             }
-            $indexes[] = self::GetIndexes($tablename,indent(4));
-            $uniques[] = self::GetUniques($tablename,indent(4));
+            $inheritUnique = array_merge($autoIncrement, $primaryKeys);
+
+            $indexes[] = self::GetIndexes($tablename, $inheritUnique, indent(4));
+            $uniques[] = self::GetUniques($tablename, $inheritUnique, indent(4));
 
             if(count($primaryKeys)>0){
                 if(count($primaryKeys)==1){
@@ -216,12 +222,16 @@ class MyLaravelMigrate{
             $primaryKeys=[];
             $indexes=[];
             $uniques=[];
+            $autoIncrement=[];
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL;
                     $schemaTableWrapInject .= indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
                     $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(4));
                     $schemaTableWrapInject="";
+                    if(strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") > -1){
+                        $autoIncrement[]=$columndata["Field"];
+                    }
                     if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                         $primaryKeys[]=$columndata["Field"];
                     }
@@ -231,8 +241,10 @@ class MyLaravelMigrate{
                 $eloquentData .= indent(3) . '}' . PHP_EOL
                     . PHP_EOL;
             }
-            $indexes[] = self::GetIndexes($tablename,indent(5));
-            $uniques[] = self::GetUniques($tablename,indent(5));
+            $inheritUnique = array_merge($autoIncrement, $primaryKeys);
+
+            $indexes[] = self::GetIndexes($tablename, $inheritUnique, indent(5));
+            $uniques[] = self::GetUniques($tablename, $inheritUnique, indent(5));
 
             if(count($primaryKeys)>0){
                 if(count($primaryKeys)==1){
@@ -486,13 +498,16 @@ class MyLaravelMigrate{
         return $eloquentCall;
     }
 
-    private function GetIndexes($tablename,$indentation){
+    private function GetIndexes($tablename, $primaryKeys,$indentation){
         $schemaname = $this->GetDatabase();
-        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=1 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $sqlQuery = "SELECT DISTINCT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=1 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
         $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename)]);
         $indexCall="";
         foreach($relations as $relation) {
             $columns = $relation['COLUMN_NAME'];
+            if(in_array($columns, $primaryKeys)){
+                continue;
+            }
             $columns = array_filter(explode(",",$columns));
             if (count($columns) > 1) {
                 $indexCall .= $indentation . '$table->index([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
@@ -503,14 +518,17 @@ class MyLaravelMigrate{
         return $indexCall;
     }
 
-    private function GetUniques($tablename, $indentation){
+    private function GetUniques($tablename, $primaryKeys, $indentation){
         $schemaname = $this->GetDatabase();
-        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=0 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $sqlQuery = "SELECT DISTINCT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=0 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
         $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename)]);
         $uniqueCall="";
 
         foreach($relations as $relation) {
             $columns = $relation['COLUMN_NAME'];
+            if(in_array($columns, $primaryKeys)){
+                continue;
+            }
             $columns = array_filter(explode(",",$columns));
             if (count($columns) > 1) {
                 $uniqueCall .= $indentation . '$table->unique([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
