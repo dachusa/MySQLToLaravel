@@ -173,7 +173,7 @@ class MyLaravelMigrate{
                 if(strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") > -1){
                     $autoIncrement[]=$columndata["Field"];
                 }
-                if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
+                if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && ($columndata["Extra"] =="" || strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1)){
                     $primaryKeys[]=$columndata["Field"];
                 }
                 if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
@@ -184,7 +184,6 @@ class MyLaravelMigrate{
 
             $indexes[] = self::GetIndexes($tablename, $inheritUnique, indent(4));
             $uniques[] = self::GetUniques($tablename, $inheritUnique, indent(4));
-
             if(count($primaryKeys)>0){
                 if(count($primaryKeys)==1){
                     $schemaTableWrapInject .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
@@ -460,6 +459,9 @@ class MyLaravelMigrate{
                 break;
             //      $table->tinyInteger('numbers');	TINYINT equivalent for the database.
             case 'TINYINT':
+                if($data==1){
+                    $eloquentCall .= 'boolean(\'' . $name . '\')';
+                }
                 $eloquentCall .= 'tinyInteger(\'' . $name . '\')';
                 break;
             //      $table->timestamp('added_on');	TIMESTAMP equivalent for the database.
@@ -492,6 +494,7 @@ class MyLaravelMigrate{
         if($default != ""){
             if($default=="CURRENT_TIMESTAMP"){
                 $eloquentCall .= "->useCurrent()";
+                //Needs on update use current_timestamp feature if in extra
             }else{
                 $eloquentCall .= "->default('".addslashes($default)."')";
             }
