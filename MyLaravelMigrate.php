@@ -184,11 +184,12 @@ class MyLaravelMigrate{
 
             $indexes[] = self::GetIndexes($tablename, $inheritUnique, indent(4));
             $uniques[] = self::GetUniques($tablename, $inheritUnique, indent(4));
-            if(count($primaryKeys)>0){
+            if(count($primaryKeys)>0 && count($autoIncrement)==0){
+                $identifierName = self::GetIdentifier($tablename, implode("_", $primaryKeys), "primary");
                 if(count($primaryKeys)==1){
-                    $schemaTableWrapInject .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                    $schemaTableWrapInject .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\',\''.$identifierName.'\');' . PHP_EOL;
                 }else{
-                    $schemaTableWrapInject .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
+                    $schemaTableWrapInject .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\'],\''.$identifierName.'\');' . PHP_EOL;
                 }
             }
             $foreignKeys = array_filter($foreignKeys);
@@ -245,11 +246,12 @@ class MyLaravelMigrate{
             $indexes[] = self::GetIndexes($tablename, $inheritUnique, indent(5));
             $uniques[] = self::GetUniques($tablename, $inheritUnique, indent(5));
 
-            if(count($primaryKeys)>0){
+            if(count($primaryKeys)>0 && count($autoIncrement)==0){
+                $identifierName = self::GetIdentifier($tablename, implode("_", $primaryKeys), "primary");
                 if(count($primaryKeys)==1){
-                    $schemaTableWrapInject .=  indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                    $schemaTableWrapInject .=  indent(4) . '$table->primary(\'' . implode($primaryKeys).'\',\''.$identifierName.'\');' . PHP_EOL;
                 }else{
-                    $schemaTableWrapInject .=  indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
+                    $schemaTableWrapInject .=  indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\'],\''.$identifierName.'\');' . PHP_EOL;
                 }
                 $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
                 $schemaTableWrapInject="";
