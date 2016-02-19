@@ -160,14 +160,22 @@ class MyLaravelMigrate{
 
             $columns = $this->db->Query($query);
             $foreignKeys=[];
+            $primaryKeys=[];
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
                 if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
-                    $eloquentData .= indent(4) . '$table->primary(\''.$columndata["Field"].'\');' . PHP_EOL;
+                    $primaryKeys[]=$columndata["Field"];
                 }
                 if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
                     $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(4));
+                }
+            }
+            if(count($primaryKeys)>0){
+                if(count($primaryKeys)==1){
+                    $eloquentData .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                }else{
+                    $eloquentData .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
                 }
             }
             $foreignKeys = array_filter($foreignKeys);
@@ -182,21 +190,42 @@ class MyLaravelMigrate{
             $eloquentData .=  indent(3) . "});" . PHP_EOL
             . indent(2) ."}else{" . PHP_EOL;
 
+            $foreignKeys=[];
+            $primaryKeys=[];
+
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL
                     . indent(3) . "//" . PHP_EOL
                     . indent(4) . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
                     . indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
                     if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
-                        $eloquentData .= indent(5) . '$table->primary(\''.$columndata["Field"].'\');' . PHP_EOL;
+                        $primaryKeys[]=$columndata["Field"];
                     }
                     if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
-                        $eloquentData .= self::GetForeignKeys($tablename, $columndata["Field"], indent(5));
+                        $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(5));
                     }
                 $eloquentData .= indent(4) . '});' . PHP_EOL
                     . indent(3) . '}' . PHP_EOL
                     . PHP_EOL;
             }
+            if(count($primaryKeys)>0){
+                $eloquentData .= indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                    if(count($primaryKeys)==1){
+                        $eloquentData .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                    }else{
+                        $eloquentData .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
+                    }
+                    $eloquentData .= indent(3) . "});" . PHP_EOL;
+            }
+            $foreignKeys = array_filter($foreignKeys);
+            if(count($foreignKeys) > 0){
+                $eloquentData .= indent(3) . "});" . PHP_EOL
+                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
+                foreach($foreignKeys as $foreignKey){
+                    $eloquentData .= $foreignKey;
+                }
+            }
+
             $eloquentData .= indent(2) . "}" . PHP_EOL
                 . indent() . "}" . PHP_EOL
                 . PHP_EOL;
