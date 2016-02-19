@@ -164,7 +164,7 @@ class MyLaravelMigrate{
 
             foreach ($columns as $columndata) {
                 $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
-                if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
+                if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                     $primaryKeys[]=$columndata["Field"];
                 }
                 if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
@@ -198,7 +198,7 @@ class MyLaravelMigrate{
                     . indent(3) . "//" . PHP_EOL
                     . indent(4) . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
                     . indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
-                    if(strpos(strtoupper($columndata["Key"]), "PRI") > -1){
+                    if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                         $primaryKeys[]=$columndata["Field"];
                     }
                     if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
