@@ -16,6 +16,11 @@
         <script type="text/javascript">
             jQuery(function(){
                 $(".saveToFile").click(function(){saveTextAsFile(this)});
+                $(".saveAll").click(function(){
+                    $(".saveToFile").each(function(){
+                       $(this).click();
+                    });
+                });
             });
             function saveTextAsFile(clicked){
                 var textToWrite = $("#table-"+$(clicked).attr("data-table") + " textarea").val();
@@ -66,6 +71,7 @@
                     </form>
                 </div>
             </div>
+            <button class='btn btn-info saveAll pull-right'><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span></button>
             <?php echo $myLaravel->GetMigrations(); ?>
         </div>
     </body>
