@@ -471,6 +471,9 @@ class MyLaravelMigrate{
                 $eloquentCall .= 'timestamps()';
                 break;
             //      $table->uuid('id');
+            case 'YEAR':
+                $eloquentCall .= 'tinyInteger(\'' . $name . '\')';
+                break;
             case 'UUID':
                 $eloquentCall .= 'uuid(\'' . $name . '\')';
                 break;
@@ -509,10 +512,12 @@ class MyLaravelMigrate{
                 continue;
             }
             $columns = array_filter(explode(",",$columns));
+            $identifierName = self::GetIdentifier($tablename, implode("_", $columns), "index");
             if (count($columns) > 1) {
-                $indexCall .= $indentation . '$table->index([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
+
+                $indexCall .= $indentation . '$table->index([\'' . implode("','", $columns) . '\'], \'' . $identifierName . '\');' . PHP_EOL;
             } else {
-                $indexCall .= $indentation . '$table->index(\'' . implode($columns) . '\');' . PHP_EOL;
+                $indexCall .= $indentation . '$table->index(\'' . implode($columns) . '\', \'' . $identifierName . '\');' . PHP_EOL;
             }
         }
         return $indexCall;
@@ -530,10 +535,11 @@ class MyLaravelMigrate{
                 continue;
             }
             $columns = array_filter(explode(",",$columns));
+            $identifierName = self::GetIdentifier($tablename, implode("_", $columns), "unique");
             if (count($columns) > 1) {
-                $uniqueCall .= $indentation . '$table->unique([\'' . implode("','", $columns) . '\']);' . PHP_EOL;
+                $uniqueCall .= $indentation . '$table->unique([\'' . implode("','", $columns) . '\'], \'' . $identifierName . '\');' . PHP_EOL;
             } else {
-                $uniqueCall .= $indentation . '$table->unique(\'' . implode($columns) . '\');' . PHP_EOL;
+                $uniqueCall .= $indentation . '$table->unique(\'' . implode($columns) . '\', \'' . $identifierName . '\');' . PHP_EOL;
             }
         }
         return $uniqueCall;
@@ -580,6 +586,23 @@ class MyLaravelMigrate{
             . $indentation . '});' . PHP_EOL;
 
         return $wrap;
+    }
+
+    private function GetIdentifier($tablename, $columns, $type){
+        $maxCharacters = 60; //64, but reducing to avoid issues
+        $identifier = $tablename."_".$columns."_".$type;
+        if(strlen($identifier) > $maxCharacters){
+            $constraint = strlen($tablename."_".$type);
+            $columns = explode("_",$columns);
+            $remainder = $maxCharacters - $constraint - count($columns);
+            $permit = ($remainder - ($remainder % count($columns))) / count($columns);
+            $identifier =$tablename."_";
+            foreach($columns as $column){
+                $identifier .= substr($column,0,$permit)."_";
+            }
+            $identifier .= $type;
+        }
+        return $identifier;
     }
 }
 
