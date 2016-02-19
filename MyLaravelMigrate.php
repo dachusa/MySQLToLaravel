@@ -156,8 +156,10 @@ class MyLaravelMigrate{
                 . indent() . " */" . PHP_EOL
                 . indent() . "public function up()" . PHP_EOL
                 . indent() . "{" . PHP_EOL
-                . indent(2) . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL
-                . indent(3) . "Schema::create('" . $tablename . '\', function (Blueprint $table) {' . PHP_EOL;
+                . indent(2) . "if (!Schema::hasTable('" . $tablename . "')) {" . PHP_EOL;
+
+            $schemaCreateWrapInject = "";
+            $schemaTableWrapInject = "";
 
             $columns = $this->db->Query($query);
             $foreignKeys=[];
@@ -166,7 +168,7 @@ class MyLaravelMigrate{
             $uniques=[];
 
             foreach ($columns as $columndata) {
-                $eloquentData .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                $schemaCreateWrapInject .= indent(4) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
                 if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                     $primaryKeys[]=$columndata["Field"];
                 }
@@ -179,38 +181,36 @@ class MyLaravelMigrate{
 
             if(count($primaryKeys)>0){
                 if(count($primaryKeys)==1){
-                    $eloquentData .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                    $schemaTableWrapInject .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
                 }else{
-                    $eloquentData .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
+                    $schemaTableWrapInject .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
                 }
             }
             $foreignKeys = array_filter($foreignKeys);
             if(count($foreignKeys) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($foreignKeys as $foreignKey){
-                    $eloquentData .= $foreignKey;
+                    $schemaTableWrapInject .= $foreignKey;
                 }
             }
             $indexes = array_filter($indexes);
             if(count($indexes) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($indexes as $index){
-                    $eloquentData .= $index;
+                    $schemaTableWrapInject .= $index;
                 }
             }
             $uniques = array_filter($uniques);
             if(count($uniques) > 0){
-                $eloquentData .= indent(3) . "});" . PHP_EOL
-                    . indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($uniques as $unique){
-                    $eloquentData .= $unique;
+                    $schemaTableWrapInject .= $unique;
                 }
             }
+            $eloquentData .= self::SchemaCreateWrap($tablename,$schemaCreateWrapInject,indent(3));
+            $schemaCreateWrapInject="";
+            $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
+            $schemaTableWrapInject="";
 
-            $eloquentData .=  indent(3) . "});" . PHP_EOL
-            . indent(2) ."}else{" . PHP_EOL;
+            //End Else
+            $eloquentData .= indent(2) ."}else{" . PHP_EOL;
 
             $foreignKeys=[];
             $primaryKeys=[];
@@ -218,60 +218,60 @@ class MyLaravelMigrate{
             $uniques=[];
 
             foreach ($columns as $columndata) {
-                $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL
-                    . indent(3) . "//" . PHP_EOL
-                    . indent(4) . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
-                    . indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                $eloquentData .= indent(3) . 'if (!Schema::hasColumn(\'' . $tablename . '\', \'' . $columndata["Field"] . '\')) {' . PHP_EOL;
+                    $schemaTableWrapInject .= indent(5) . self::AddColumnByDataType($tablename, $columndata) . ';' . PHP_EOL;
+                    $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(4));
+                    $schemaTableWrapInject="";
                     if(strpos(strtoupper($columndata["Key"]), "PRI") > -1 && strpos(strtoupper($columndata["Extra"]),"AUTO_INCREMENT") == -1){
                         $primaryKeys[]=$columndata["Field"];
                     }
                     if (strpos(strtoupper($columndata["Key"]),"MUL") > -1) {
                         $foreignKeys[]= self::GetForeignKeys($tablename, $columndata["Field"], indent(5));
                     }
-                $eloquentData .= indent(4) . '});' . PHP_EOL
-                    . indent(3) . '}' . PHP_EOL
+                $eloquentData .= indent(3) . '}' . PHP_EOL
                     . PHP_EOL;
             }
             $indexes[] = self::GetIndexes($tablename,indent(5));
             $uniques[] = self::GetUniques($tablename,indent(5));
+
             if(count($primaryKeys)>0){
-                $eloquentData .= indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
-                    if(count($primaryKeys)==1){
-                        $eloquentData .= indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
-                    }else{
-                        $eloquentData .= indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
-                    }
-                    $eloquentData .= indent(3) . "});" . PHP_EOL;
+                if(count($primaryKeys)==1){
+                    $schemaTableWrapInject .=  indent(4) . '$table->primary(\'' . implode($primaryKeys).'\');' . PHP_EOL;
+                }else{
+                    $schemaTableWrapInject .=  indent(4) . '$table->primary([\'' . implode('\',\'',$primaryKeys).'\']);' . PHP_EOL;
+                }
+                $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
+                $schemaTableWrapInject="";
             }
             $foreignKeys = array_filter($foreignKeys);
             if(count($foreignKeys) > 0){
-                $eloquentData .=  indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($foreignKeys as $foreignKey){
-                    $eloquentData .= $foreignKey;
+                    $schemaTableWrapInject .= $foreignKey;
                 }
-                $eloquentData .=  indent(3) . "});" . PHP_EOL;
+                $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
+                $schemaTableWrapInject="";
             }
 
             $indexes = array_filter($indexes);
             if(count($indexes) > 0){
-                $eloquentData .= indent(3) . "Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($indexes as $index){
-                    $eloquentData .= $index;
+                    $schemaTableWrapInject .= $index;
                 }
-                $eloquentData .=  indent(3) . "});" . PHP_EOL;
+                $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
+                $schemaTableWrapInject="";
             }
 
             $uniques = array_filter($uniques);
             if(count($uniques) > 0){
-                $eloquentData .="Schema::table('" . $tablename . '\', function ($table) {' . PHP_EOL;
                 foreach($uniques as $unique){
-                    $eloquentData .= $unique;
+                    $schemaTableWrapInject .= $unique;
                 }
-                $eloquentData .= indent(3) . "});" . PHP_EOL;
+                $eloquentData .= self::SchemaTableWrap($tablename,$schemaTableWrapInject,indent(3));
+                $schemaTableWrapInject="";
             }
 
-            $eloquentData .= indent(2) . "}" . PHP_EOL
-                . indent() . "}" . PHP_EOL
+            $eloquentData .= indent(2) . "}" . PHP_EOL //End Else
+                . indent() . "}" . PHP_EOL //End Up()
                 . PHP_EOL;
 
             $eloquentData .= indent() . "/**" . PHP_EOL
@@ -487,8 +487,9 @@ class MyLaravelMigrate{
     }
 
     private function GetIndexes($tablename,$indentation){
-        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = :tablename AND Non_unique=1 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
-        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $schemaname = $this->GetDatabase();
+        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=1 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename)]);
         $indexCall="";
         foreach($relations as $relation) {
             $columns = $relation['COLUMN_NAME'];
@@ -503,8 +504,9 @@ class MyLaravelMigrate{
     }
 
     private function GetUniques($tablename, $indentation){
-        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = :tablename AND Non_unique=0 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
-        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $schemaname = $this->GetDatabase();
+        $sqlQuery = "SELECT GROUP_CONCAT(COLUMN_NAME) as COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND Non_unique=0 AND INDEX_NAME <> 'PRIMARY' GROUP BY INDEX_NAME;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename)]);
         $uniqueCall="";
 
         foreach($relations as $relation) {
@@ -520,8 +522,9 @@ class MyLaravelMigrate{
     }
 
     private function GetForeignKeys($tablename, $columnname, $indentation){
-        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND COLUMN_NAME =  :columnname AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
-        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename), new SQLParameter(":columnname",$columnname)]);
+        $schemaname = $this->GetDatabase();
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND COLUMN_NAME=:columnname AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename), new SQLParameter(":columnname",$columnname)]);
         $foreignCall="";
         foreach($relations as $relation) {
             $foreignCall.= $indentation . '$table->foreign(\'' . $relation['COLUMN_NAME'] . '\')->references(\'' . $relation['REFERENCED_COLUMN_NAME'] . '\')->on(\'' . $relation['REFERENCED_TABLE_NAME'] . '\');' . PHP_EOL;
@@ -530,19 +533,35 @@ class MyLaravelMigrate{
     }
 
     private function DropForeignKeys($tablename, $indentation){
-        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME =  :tablename AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
-        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":tablename",$tablename)]);
+        $schemaname = $this->GetDatabase();
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=:schemaname AND TABLE_NAME=:tablename AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+        $relations = $this->db->Query($sqlQuery, [new SQLParameter(":schemaname",$schemaname), new SQLParameter(":tablename",$tablename)]);
         $foreignCall="";
         foreach($relations as $relation) {
             $foreignCall.= $indentation . indent() . '$table->dropForeign([\'' . $relation['COLUMN_NAME'] . '\']);' . PHP_EOL;
         }
 
         if($foreignCall!=""){
-            $foreignCall = $indentation . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
-                . $foreignCall
-                . $indentation . '});' . PHP_EOL;
+            $foreignCall = self::SchemaTableWrap($tablename,$foreignCall,$indentation);
         }
+
         return $foreignCall;
+    }
+
+    private function SchemaCreateWrap($tablename, $content, $indentation){
+        $wrap = $indentation . 'Schema::create(\'' . $tablename . '\', function (Blueprint $table){' . PHP_EOL
+            . $content
+            . $indentation . '});' . PHP_EOL;
+
+        return $wrap;
+    }
+
+    private function SchemaTableWrap($tablename, $content, $indentation){
+        $wrap = $indentation . 'Schema::table(\'' . $tablename . '\', function ($table) {' . PHP_EOL
+            . $content
+            . $indentation . '});' . PHP_EOL;
+
+        return $wrap;
     }
 }
 
